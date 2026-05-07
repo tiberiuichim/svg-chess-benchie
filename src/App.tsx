@@ -198,7 +198,7 @@ export default function App() {
               <div className="px-4 py-2 border-b border-gray-800 text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Original
               </div>
-              <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+              <div className="flex-1 overflow-auto p-4 flex flex-col items-center">
                 <img
                   src="/original.webp"
                   alt="Original chess board reference"
