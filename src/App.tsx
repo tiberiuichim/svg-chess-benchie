@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { PromptForm } from './components/PromptForm';
 import { MessageDisplay } from './components/MessageDisplay';
 import { ModelSelector } from './components/ModelSelector';
-import { SVGRenderer } from './components/SVGRenderer';
 
 export default function App() {
   const [userPrompt, setUserPrompt] = useState<string | null>(null);
@@ -121,7 +120,7 @@ export default function App() {
       <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
 
-          {/* LEFT: Prompt + Response text */}
+          {/* LEFT: Prompt + Generated SVG */}
           <div className="flex flex-col gap-4 min-h-[500px]">
             <PromptForm
               onSend={handleSend}
@@ -131,27 +130,9 @@ export default function App() {
 
             {/* Response area */}
             <div className="flex-1 min-h-[300px] rounded-xl bg-gray-900 border border-gray-800 flex flex-col">
-              <div className="px-4 py-2 border-b border-gray-800 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                LLM Response
-              </div>
-              <div className="flex-1 overflow-auto p-4">
-                <MessageDisplay
-                  userPrompt={userPrompt}
-                  assistantText={assistantText}
-                  isStreaming={isLoading}
-                  elapsedMs={elapsedMs}
-                  compact
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: SVG rendering */}
-          <div className="flex flex-col gap-4 min-h-[500px]">
-            <div className="flex-1 rounded-xl bg-gray-900 border border-gray-800 flex flex-col">
               <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  SVG Output
+                  Generated
                 </span>
                 {elapsedMs !== null && (
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -190,11 +171,39 @@ export default function App() {
                 )}
 
                 {!isLoading && !assistantText && (
-                  <div className="flex flex-col items-center gap-3 text-gray-600">
-                    <img src="/original.webp" alt="Reference chess board" className="max-h-64 rounded-lg border border-gray-800 opacity-60" />
-                    <span className="text-xs mt-2">Generated SVG will appear here</span>
+                  <div className="flex flex-col items-center justify-center h-full text-gray-600 text-sm">
+                    Generated SVG will appear here
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Raw text below */}
+            {assistantText && (
+              <div className="rounded-xl bg-gray-900 border border-gray-800">
+                <MessageDisplay
+                  userPrompt={userPrompt}
+                  assistantText={assistantText}
+                  isStreaming={false}
+                  elapsedMs={null}
+                  compact
+                />
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT: Original reference image (always visible) */}
+          <div className="flex flex-col gap-4 min-h-[500px]">
+            <div className="flex-1 rounded-xl bg-gray-900 border border-gray-800 flex flex-col">
+              <div className="px-4 py-2 border-b border-gray-800 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Original
+              </div>
+              <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+                <img
+                  src="/original.webp"
+                  alt="Original chess board reference"
+                  className="max-w-full max-h-full rounded-lg object-contain"
+                />
               </div>
             </div>
           </div>
