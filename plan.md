@@ -1,141 +1,72 @@
-# SVG Prompt Generator — Plan
+# SVG Chess Benchie — Plan & Status
 
 ## Overview
 
-A simple Vite + React web app where users type a system prompt into a textarea, hit a button, and receive a streamed LLM response that contains an SVG picture. The app renders the SVG inline. The user's entire textarea input is sent as the system prompt to the LLM — no hardcoded system prompt. The user's prompt itself should instruct the model (e.g. "You are a chess board renderer, draw..." or "Generate an SVG of a sunset...").
+A simple Vite + React web app where users edit a system prompt in a textarea, hit a button, and receive an LLM response that contains an SVG picture. The app renders the SVG inline. The user's full textarea content is sent as the **system prompt** to the LLM — no hardcoded system prompt.
 
 ## Architecture
 
 ```
-┌─────────────────────┐     HTTP (POST /api/generate)     ┌─────────────────────┐
-│  Vite + React SPA   │◄──────────────────────────────────►│  Node.js Backend    │
-│  (port 5173)        │                                    │  (port 3000)         │
-│  - Textarea prompt   │                                    │  Express server     │
-│  - useChat hook     │                                    │                    │
-│  - Streaming display │  ◄── SSE UI Message Stream ──────  │  streamText()      │
-│  - SVG rendering    │                                    │  via @ai-sdk        │
+┌─────────────────────┐     POST /api/generate (JSON)     ┌─────────────────────┐
+│  Vite + React SPA   │◄──────────────────────────────────►│  Express Server      │
+│  (port 5173)        │         JSON response              │  (port 3100)         │
+│  - Textarea prompt   │                                    │                    │
+│  - Direct fetch       │                                    │  generateText()      │
+│  - SVG rendering    │                                    │  via @ai-sdk         │
 │  - Tailwind styling │                                    │                    │
-│                     │                                    │  createOpenAICompatible│
-│                     │                                    │  → local LLM endpoint │
+│  - Model selector    │                                    │  createOpenAICompatible│
+│                     │                                    │  → local LLM (4000)   │
 └─────────────────────┘                                    └─────────────────────┘
 ```
 
-## Tech Stack
+## Tech Stack (Implemented ✓)
 
-- **Build tool**: Vite 5+ (React + TypeScript template)
-- **Framework**: React 18+
-- **Styling**: Tailwind CSS v3+
-- **LLM SDK**: `@ai-sdk/react` (useChat) + `ai` + `@ai-sdk/openai-compatible`
-- **Backend**: Express.js
-- **Local LLM**: OpenAI-compatible endpoint (e.g., Ollama, LM Studio, llama.cpp server)
+- **Build tool**: Vite 8 + React 19 + TypeScript
+- **Styling**: Tailwind CSS v3
+- **LLM SDK**: `ai` v5 (`generateText`) + `@ai-sdk/openai-compatible` v1
+- **Backend**: Express 5
+- **Local LLM**: llama.cpp server on `http://localhost:4000/v1` (OpenAI-compatible)
+- **Process runner**: `tsx` for TypeScript server, `concurrently` to run both
 
-## Package Study
+## What Was Implemented
 
-Clone the Vercel AI SDK repo (`https://github.com/vercel/ai`) into a local `vercel-ai` directory for reference. Key packages studied:
+### Backend (`server/index.ts`)
+- Express server on port 3100 (configurable via `PORT` env var)
+- `POST /api/generate` — accepts `{ prompt, model }`, calls `generateText()` via `@ai-sdk/openai-compatible`, returns `{ text }` JSON
+- `GET /api/models` — fetches available models from the LLM server's `/v1/models` endpoint
+- Serves static prompt files from `prompts/` directory at `/prompts/*`
+- CORS enabled for `localhost:5173`
 
-- **`packages/ai`** — Core library. Key exports:
-  - `streamText()` — streams text from a model, returns a `StreamTextResult` with `toUIMessageStreamResponse()` for HTTP streaming
-  - `generateText()` — non-streaming one-shot generation
-  - `DefaultChatTransport`, `Chat`, `UIMessage` — client-side chat primitives
-  - `UIMessageStream` / SSE protocol for streaming responses
+### Frontend (`src/`)
+- **`App.tsx`** — Orchestrates everything. Fetches models list and default prompt on mount. Sends POST to `/api/generate` with direct fetch (no `useChat` hook needed since we don't do multi-turn chat).
+- **`components/PromptForm.tsx`** — Textarea pre-filled with default prompt. "Reset to default" button. "Generate SVG" button with loading spinner.
+- **`components/MessageDisplay.tsx`** — Shows user prompt (right-aligned purple bubble) and assistant response (left-aligned dark bubble). Loading spinner while generating. Renders extracted SVG inline.
+- **`components/SVGRenderer.tsx`** — Extracts SVG from markdown code fences (````xml` or ```svg```) or bare SVG. Renders via `dangerouslySetInnerHTML` in a responsive container.
+- **`components/ModelSelector.tsx`** — Dropdown populated from `/api/models`. Lets user pick which model to use.
 
-- **`packages/react`** — React hooks:
-  - `useChat()` — the main hook. Takes an `api` URL (or `transport`). Provides `messages`, `sendMessage`, `status`, `error`.
-  - The hook sends POST requests to the API endpoint with `{ messages }` body and parses SSE responses.
-
-- **`packages/openai-compatible`** — Provider for any OpenAI-compatible API:
-  - `createOpenAICompatible({ baseURL, name })` — creates a provider instance
-  - Usage: `provider('any-model-id').languageModel(...)` or simply `provider('any-model-id')`
-
-## Project Structure
-
-```
-benchies/
-├── plan.md
-├── vercel-ai/                    # cloned for reference (gitignored in final)
-├── package.json                  # workspace root or just the app
-├── vite.config.ts
-├── tsconfig.json
-├── tailwind.config.js
-├── postcss.config.js
-├── server/
-│   └── index.ts                  # Express server (port 3000)
-├── src/
-│   ├── main.tsx                  # React entry point
-│   ├── App.tsx                   # Main app component
-│   ├── components/
-│   │   ├── PromptForm.tsx        # Textarea + Send button
-│   │   ├── MessageDisplay.tsx    # Renders LLM text + extracted SVG
-│   │   └── SVGRenderer.tsx       # Parses & renders SVG from response
-│   └── index.css                 # Tailwind directives
-├── index.html
-└── vite.config.ts                # dev proxy to backend
-```
-
-## Backend (`server/index.ts`)
-
-1. Express app on port 3000
-2. Single POST endpoint: `/api/generate`
-3. Accepts `{ prompt: string }` in JSON body
-4. Uses `createOpenAICompatible` to connect to local LLM (configurable via env vars: `LLM_BASE_URL`, `LLM_MODEL`)
-5. Sends the user's textarea input directly as the system prompt to the LLM — no hardcoded or templated system prompt
-6. Calls `streamText()` with `system: prompt` and pipes the result to the HTTP response via `toUIMessageStreamResponse()`
-7. CORS enabled for the Vite dev server
-
-No fixed system prompt — the user controls everything. They might write "You are a chess engine, render the current board as SVG" or "Draw a beautiful SVG of a cat" — it's all up to them.
-
-## Frontend
-
-### `App.tsx`
-- Uses `useChat()` from `@ai-sdk/react` with `api: '/api/generate'`
-- The textarea is controlled by local state (not part of messages)
-- On submit, calls `sendMessage({ content: userPrompt })`
-- Displays messages: user prompts and assistant responses
-- Extracts SVG code blocks from assistant messages and renders them
-
-### `PromptForm.tsx`
-- A `<textarea>` with a placeholder like "Describe an image..."
-- A "Generate" button that calls `sendMessage`
-- Disabled while streaming (`status !== 'ready'`)
-- Nice Tailwind styling: rounded corners, shadow, focus ring
-
-### `MessageDisplay.tsx`
-- Iterates over `messages` from `useChat`
-- User messages: right-aligned bubble
-- Assistant messages: left-aligned, shows text content + embedded SVG
-
-### `SVGRenderer.tsx`
-- Regex to extract SVG code from markdown code blocks (` ```xml ... ``` ` or ` ```svg ... ``` `)
-- Uses `dangerouslySetInnerHTML` to render the SVG (safe since it's LLM-generated SVG)
-- Wraps in a responsive container with max-width
-- Shows loading skeleton while streaming
-
-## Vite Configuration
-
-- Dev server on port 5173
-- Proxy `/api` to `http://localhost:3000` during development
-- This way `useChat({ api: '/api/generate' })` works seamlessly in dev
-
-## Environment Variables
-
-```
-LLM_BASE_URL=http://localhost:11434/v1   # or whatever local LLM endpoint
-LLM_MODEL=llama3                         # model name
-```
-
-## Implementation Steps
-
-1. **Study the AI SDK** — Clone and review `https://github.com/vercel/ai` (done ✓)
-2. **Scaffold the project** — `npm create vite@latest . -- --template react-ts`, add Tailwind, Express
-3. **Set up the backend** — Express server with `streamText` + `createOpenAICompatible`
-4. **Set up the frontend** — `useChat` hook, `PromptForm`, `MessageDisplay`, `SVGRenderer`
-5. **Wire it together** — Vite proxy, env vars, system prompt
-6. **Style with Tailwind** — Clean, modern UI with animations
-7. **Test end-to-end** — Verify streaming, SVG rendering, error handling
+### Configuration
+- **`.env`** — `LLM_BASE_URL=http://localhost:4000/v1`, `LLM_MODEL=` (empty = auto-select loaded model)
+- **`prompts/default.txt`** — Default chess board prompt. Loaded into textarea on page load.
+- **`vite.config.ts`** — Proxies `/api` and `/prompts` to Express on port 3100
+- **`npm run dev`** — Runs both Vite (5173) and Express (3100) via `concurrently`
 
 ## Key Design Decisions
 
-- **Backend streaming via SSE**: The AI SDK's `toUIMessageStreamResponse()` handles the SSE protocol automatically. The `useChat` hook on the client parses it.
-- **User-defined system prompt**: The entire textarea content is sent as the system prompt. The user is responsible for instructing the model (e.g., "Output only valid SVG in markdown code fences"). No hardcoded system prompt on our side.
-- **OpenAI-compatible provider**: This is the most flexible option — works with Ollama, LM Studio, llama.cpp, LiteLLM, etc. Just change the `baseURL`.
-- **No Next.js**: Pure Vite + Express keeps it simple and avoids server-component complexities.
+- **`generateText` (non-streaming) instead of `streamText`**: The `pipeUIMessageStreamToResponse` / `toUIMessageStreamResponse` from AI SDK v5 had compatibility issues with Express 5 (model version negotiation: v3 vs v2). Using `generateText` with JSON response avoids this entirely. For a single-prompt → SVG flow, non-streaming is fine.
+- **Direct fetch instead of `@ai-sdk/react`**: Since we only have a single prompt/response (no chat history), the full `useChat` hook is overkill. A simple `fetch` + JSON parse is cleaner.
+- **User-defined system prompt**: The entire textarea content is the system prompt. The user controls everything. The default prompt in `prompts/default.txt` is just a convenient starting point.
+- **Model selector**: Models are fetched live from the LLM server at startup. If only one model is loaded (like `Qwen3.6-27B-MTP-IQ4_XS.gguf`), the dropdown still works.
+- **Port 3100**: Port 3000 is occupied by another service. Configurable via `PORT` env var.
+
+## Package Study
+
+The Vercel AI SDK repo was cloned and studied:
+- `packages/ai` — `streamText()`, `generateText()`, SSE streaming, `UIMessageStream`
+- `packages/react` — `useChat()` hook, `Chat` transport
+- `packages/openai-compatible` — `createOpenAICompatible()` for any OpenAI-compatible API
+
+The v1 `@ai-sdk/openai-compatible` was chosen because it produces v2 models compatible with AI SDK v5 (v2 of the package produces v3 models which are incompatible).
+
+## Future / Not Implemented
+
+- Nothing major — the core flow is complete and tested against the real LLM server.

@@ -37,9 +37,6 @@ export function MessageDisplay({ userPrompt, assistantText, isStreaming }: Messa
               {!assistantText.includes('<svg') && !assistantText.match(/```(?:xml|svg)/) && (
                 <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
                   {assistantText}
-                  {isStreaming && (
-                    <span className="inline-block w-2 h-4 bg-violet-400 animate-pulse ml-0.5 align-text-bottom" />
-                  )}
                 </pre>
               )}
               {/* Show text + SVG if SVG is present */}
@@ -47,13 +44,24 @@ export function MessageDisplay({ userPrompt, assistantText, isStreaming }: Messa
                 <>
                   <pre className="text-sm text-gray-400 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">
                     {assistantText}
-                    {isStreaming && (
-                      <span className="inline-block w-2 h-4 bg-violet-400 animate-pulse ml-0.5 align-text-bottom" />
-                    )}
                   </pre>
                   <SVGRenderer text={assistantText} />
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isStreaming && !assistantText && (
+        <div className="flex justify-start">
+          <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-gray-800 border border-gray-700">
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Generating...
             </div>
           </div>
         </div>
