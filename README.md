@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# SVG Chess Benchie
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web app that turns a natural-language prompt into an SVG chessboard image via a local LLM.
 
-Currently, two official plugins are available:
+You write a system prompt (e.g. a PGN game with instructions to render it), the app sends it to your local LLM server, and the resulting SVG is rendered inline.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requirements
 
-## React Compiler
+- Node.js 18+
+- A local LLM server with an OpenAI-compatible API (e.g. llama.cpp, Ollama, LM Studio)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Setup
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Edit `.env` to point at your LLM server:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+LLM_BASE_URL=http://localhost:4000/v1
+LLM_MODEL=
 ```
+
+Leave `LLM_MODEL` empty to auto-select the loaded model, or set it to a specific model name.
+
+## Running
+
+```bash
+npm run dev
+```
+
+This starts both the Express backend (port 3100) and the Vite frontend (port 5173) concurrently. Open http://localhost:5173.
+
+## How It Works
+
+1. The textarea is pre-filled with the default prompt from `prompts/default.txt` — edit it to your liking.
+2. Click **Generate SVG** — the entire textarea content is sent as the **system prompt** to the LLM.
+3. The backend uses the Vercel AI SDK (`generateText` via `@ai-sdk/openai-compatible`) to call your local LLM.
+4. The response is parsed for SVG code (in ````xml` or ```svg```` code fences) and rendered inline.
+
+## Project Structure
+
+```
+├── prompts/
+│   └── default.txt        # Default system prompt (edit freely)
+├── server/
+│   └── index.ts           # Express backend (port 3100)
+├── src/
+│   ├── App.tsx            # Main app component
+│   ├── components/
+│   │   ├── PromptForm.tsx         # Textarea + send button
+│   │   ├── MessageDisplay.tsx     # Chat-style message bubbles
+│   │   ├── SVGRenderer.tsx        # Extracts & renders SVG from response
+│   │   └── ModelSelector.tsx      # Model dropdown from /api/models
+│   └── index.css          # Tailwind directives
+├── .env                   # LLM server config (gitignored)
+├── .env.example           # Template
+├── vite.config.ts         # Vite + proxy to backend
+└── plan.md                # Detailed design plan
+```
+
+## Configurable Ports
+
+- Frontend: set via Vite's `server.port` in `vite.config.ts` (default 5173)
+- Backend: set via `PORT` env var (default 3100)
+- LLM server: set via `LLM_BASE_URL` in `.env`
