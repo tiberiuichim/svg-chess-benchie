@@ -4,9 +4,16 @@ interface MessageDisplayProps {
   userPrompt: string | null;
   assistantText: string;
   isStreaming: boolean;
+  elapsedMs: number | null;
 }
 
-export function MessageDisplay({ userPrompt, assistantText, isStreaming }: MessageDisplayProps) {
+function formatTime(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const sec = (ms / 1000).toFixed(1);
+  return `${sec}s`;
+}
+
+export function MessageDisplay({ userPrompt, assistantText, isStreaming, elapsedMs }: MessageDisplayProps) {
   if (!userPrompt && !assistantText) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-gray-500">
@@ -49,6 +56,17 @@ export function MessageDisplay({ userPrompt, assistantText, isStreaming }: Messa
                 </>
               )}
             </div>
+
+            {/* Timing badge */}
+            {elapsedMs !== null && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 ml-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>{formatTime(elapsedMs)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

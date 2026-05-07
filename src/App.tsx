@@ -10,6 +10,7 @@ export default function App() {
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [defaultPrompt, setDefaultPrompt] = useState('');
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Fetch available models and default prompt on mount
@@ -38,7 +39,10 @@ export default function App() {
 
     setUserPrompt(prompt);
     setAssistantText('');
+    setElapsedMs(null);
     setIsLoading(true);
+
+    const startTime = performance.now();
 
     try {
       const response = await fetch('/api/generate', {
@@ -55,6 +59,7 @@ export default function App() {
 
       const data = await response.json() as { text: string };
       setAssistantText(data.text);
+      setElapsedMs(Math.round(performance.now() - startTime));
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       console.error('Error:', err);
@@ -69,6 +74,7 @@ export default function App() {
     if (abortRef.current) abortRef.current.abort();
     setUserPrompt(null);
     setAssistantText('');
+    setElapsedMs(null);
   };
 
   return (
@@ -113,6 +119,7 @@ export default function App() {
           userPrompt={userPrompt}
           assistantText={assistantText}
           isStreaming={isLoading}
+          elapsedMs={elapsedMs}
         />
       </main>
 
