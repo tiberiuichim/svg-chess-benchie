@@ -14,9 +14,24 @@ app.use('/prompts', express.static(path.resolve(import.meta.dirname, '..', 'prom
 const LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://localhost:4000/v1';
 const LLM_MODEL = process.env.LLM_MODEL || '';
 
+// 10-minute timeout for LLM calls — local models can be slow
+const LONG_TIMEOUT_MS = 10 * 60 * 1000;
+
+// Wrap global fetch with a generous timeout so long LLM generations don't abort
+const longFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), LONG_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 const provider = createOpenAICompatible({
   baseURL: LLM_BASE_URL,
   name: 'local-llm',
+  fetch: longFetch as any,
 });
 
 // ── Fetch available models from the provider ──
@@ -63,10 +78,17 @@ app.post('/api/generate', async (req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || '3100');
-app.listen(PORT, async () => {
+
+const server = app.listen(PORT, async () => {
+  // Set very long timeouts on the HTTP server itself
+  server.setTimeout(LONG_TIMEOUT_MS);
+  (server as any).headersTimeout = LONG_TIMEOUT_MS;
+  (server as any).requestTimeout = LONG_TIMEOUT_MS;
+
   const models = await fetchModels();
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`LLM endpoint: ${LLM_BASE_URL}`);
   console.log(`Default model: ${LLM_MODEL || '(auto-select from server)'}`);
   console.log(`Available models:`, models.join(', ') || '(none detected)');
+  console.log(`Request timeout: ${LONG_TIMEOUT_MS / 1000}s`);
 });
