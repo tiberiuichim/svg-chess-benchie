@@ -11,6 +11,7 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState('');
   const [defaultPrompt, setDefaultPrompt] = useState('');
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [responseBytes, setResponseBytes] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function App() {
     setUserPrompt(prompt);
     setAssistantText('');
     setElapsedMs(null);
+    setResponseBytes(null);
     setIsLoading(true);
 
     const startTime = performance.now();
@@ -59,6 +61,7 @@ export default function App() {
       const data = await response.json() as { text: string };
       setAssistantText(data.text);
       setElapsedMs(Math.round(performance.now() - startTime));
+      setResponseBytes(new TextEncoder().encode(data.text).length);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       console.error('Error:', err);
@@ -74,6 +77,7 @@ export default function App() {
     setUserPrompt(null);
     setAssistantText('');
     setElapsedMs(null);
+    setResponseBytes(null);
   };
 
   // Extract SVG from the assistant text
@@ -135,12 +139,21 @@ export default function App() {
                   Generated
                 </span>
                 {elapsedMs !== null && (
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    <span>{elapsedMs < 1000 ? `${elapsedMs}ms` : `${(elapsedMs / 1000).toFixed(1)}s`}</span>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <div className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span>{elapsedMs < 1000 ? `${elapsedMs}ms` : `${(elapsedMs / 1000).toFixed(1)}s`}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                        <polyline points="13 2 13 9 20 9" />
+                      </svg>
+                      <span>{responseBytes !== null ? (responseBytes < 1024 ? `${responseBytes}B` : `${(responseBytes / 1024).toFixed(1)}KB`) : '—'}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -156,11 +169,29 @@ export default function App() {
                 )}
 
                 {!isLoading && svgCode && (
-                  <div className="w-full flex items-center justify-center">
+                  <div className="w-full flex flex-col items-center gap-3">
                     <div
                       className="max-w-full"
                       dangerouslySetInnerHTML={{ __html: svgCode }}
                     />
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([svgCode], { type: 'image/svg+xml' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        const safeModel = selectedModel.replace(/[^\w.-]/g, '_');
+                        const ts = new Date().toISOString().replace(/[\-:T.Z]/g, '').slice(0, 14);
+                        a.href = url;
+                        a.download = `svg-${safeModel}-${ts}.svg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition"
+                    >
+                      Save SVG
+                    </button>
                   </div>
                 )}
 
