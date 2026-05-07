@@ -4,6 +4,8 @@ A web app that turns a natural-language prompt into an SVG chessboard image via 
 
 You write a system prompt (e.g. a PGN game with instructions to render it), the app sends it to your local LLM server, and the resulting SVG is rendered inline.
 
+Inspired by this [reddit post](https://www.reddit.com/r/LocalLLaMA/comments/1t53dhp/quality_comparison_between_qwen_36_27b/)
+
 ## Requirements
 
 - Node.js 18+
