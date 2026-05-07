@@ -2,7 +2,7 @@
 
 ## Overview
 
-A simple Vite + React web app where users type a text prompt into a textarea, hit a button, and receive a streamed LLM response that contains an SVG picture. The app renders the SVG inline.
+A simple Vite + React web app where users type a system prompt into a textarea, hit a button, and receive a streamed LLM response that contains an SVG picture. The app renders the SVG inline. The user's entire textarea input is sent as the system prompt to the LLM — no hardcoded system prompt. The user's prompt itself should instruct the model (e.g. "You are a chess board renderer, draw..." or "Generate an SVG of a sunset...").
 
 ## Architecture
 
@@ -78,16 +78,11 @@ benchies/
 2. Single POST endpoint: `/api/generate`
 3. Accepts `{ prompt: string }` in JSON body
 4. Uses `createOpenAICompatible` to connect to local LLM (configurable via env vars: `LLM_BASE_URL`, `LLM_MODEL`)
-5. Constructs a system prompt instructing the LLM to output an SVG image
-6. Calls `streamText()` and pipes the result to the HTTP response via `toUIMessageStreamResponse()`
+5. Sends the user's textarea input directly as the system prompt to the LLM — no hardcoded or templated system prompt
+6. Calls `streamText()` with `system: prompt` and pipes the result to the HTTP response via `toUIMessageStreamResponse()`
 7. CORS enabled for the Vite dev server
 
-System prompt template:
-```
-You are an SVG artist. Generate a beautiful SVG image based on the user's description.
-Output ONLY valid SVG code, wrapped in ```xml and ``` markdown code fences.
-The SVG should be self-contained, viewBox="0 0 800 600", and visually appealing.
-```
+No fixed system prompt — the user controls everything. They might write "You are a chess engine, render the current board as SVG" or "Draw a beautiful SVG of a cat" — it's all up to them.
 
 ## Frontend
 
@@ -141,6 +136,6 @@ LLM_MODEL=llama3                         # model name
 ## Key Design Decisions
 
 - **Backend streaming via SSE**: The AI SDK's `toUIMessageStreamResponse()` handles the SSE protocol automatically. The `useChat` hook on the client parses it.
-- **System prompt approach**: Rather than trying to get structured output, we use a strong system prompt instructing the LLM to output SVG in markdown code fences, then parse client-side.
+- **User-defined system prompt**: The entire textarea content is sent as the system prompt. The user is responsible for instructing the model (e.g., "Output only valid SVG in markdown code fences"). No hardcoded system prompt on our side.
 - **OpenAI-compatible provider**: This is the most flexible option — works with Ollama, LM Studio, llama.cpp, LiteLLM, etc. Just change the `baseURL`.
 - **No Next.js**: Pure Vite + Express keeps it simple and avoids server-component complexities.
