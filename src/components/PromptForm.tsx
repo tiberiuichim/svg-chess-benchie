@@ -1,18 +1,22 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
+import { BenchmarkDetail } from '../types';
 
 interface PromptFormProps {
   onSend: (prompt: string) => void;
   isLoading: boolean;
-  defaultPrompt: string;
+  benchmark: BenchmarkDetail | null;
+  onReload: () => void;
 }
 
-export function PromptForm({ onSend, isLoading, defaultPrompt }: PromptFormProps) {
-  const [prompt, setPrompt] = useState(defaultPrompt);
+export function PromptForm({ onSend, isLoading, benchmark, onReload }: PromptFormProps) {
+  const [prompt, setPrompt] = useState('');
 
-  // Keep in sync if defaultPrompt changes (e.g. on mount when it loads async)
-  if (defaultPrompt && !prompt && !isLoading) {
-    setPrompt(defaultPrompt);
-  }
+  // Sync textarea when benchmark changes
+  useEffect(() => {
+    if (benchmark) {
+      setPrompt(benchmark.prompt);
+    }
+  }, [benchmark?.id]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -20,22 +24,24 @@ export function PromptForm({ onSend, isLoading, defaultPrompt }: PromptFormProps
     onSend(prompt.trim());
   };
 
-  const handleLoadDefault = () => {
-    setPrompt(defaultPrompt);
+  const handleReload = () => {
+    onReload();
   };
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-400">System Prompt</label>
-        {defaultPrompt && (
+        <label className="text-sm font-medium text-gray-400">
+          {benchmark ? 'Benchmark Prompt' : 'System Prompt'}
+        </label>
+        {benchmark && (
           <button
             type="button"
-            onClick={handleLoadDefault}
+            onClick={handleReload}
             disabled={isLoading}
             className="text-xs text-violet-400 hover:text-violet-300 transition disabled:opacity-40"
           >
-            Reset to default
+            Reload benchmark
           </button>
         )}
       </div>
@@ -61,7 +67,7 @@ export function PromptForm({ onSend, isLoading, defaultPrompt }: PromptFormProps
               Generating...
             </>
           ) : (
-            'Generate SVG'
+            'Generate'
           )}
         </button>
       </div>

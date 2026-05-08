@@ -2,14 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import { generateText } from 'ai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import path from 'node:path';
+import { getBenchmarkSummaries, getBenchmarkById } from './benchmarks';
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
-
-// Serve static prompt files
-app.use('/prompts', express.static(path.resolve(import.meta.dirname, '..', 'prompts')));
 
 const LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://localhost:4000/v1';
 const LLM_MODEL = process.env.LLM_MODEL || '';
@@ -51,6 +48,22 @@ app.get('/api/models', async (_req, res) => {
   res.json({ models });
 });
 
+// ── GET /api/benchmarks ──
+app.get('/api/benchmarks', (_req, res) => {
+  const summaries = getBenchmarkSummaries();
+  res.json({ benchmarks: summaries });
+});
+
+// ── GET /api/benchmarks/:id ──
+app.get('/api/benchmarks/:id', (req, res) => {
+  const benchmark = getBenchmarkById(req.params.id);
+  if (!benchmark) {
+    res.status(404).json({ error: `Benchmark "${req.params.id}" not found` });
+    return;
+  }
+  res.json(benchmark);
+});
+
 // ── POST /api/generate ──
 app.post('/api/generate', async (req, res) => {
   const { prompt, model } = req.body as { prompt?: string; model?: string };
@@ -62,12 +75,17 @@ app.post('/api/generate', async (req, res) => {
 
   const modelName = model || LLM_MODEL;
 
+  const { type } = req.body as { prompt?: string; model?: string; type?: string };
+
+  const systemHint = type
+    ? getSystemHintForType(type)
+    : 'Generate an SVG image based on the system instructions. Output only valid SVG code wrapped in ```xml and ``` code fences.';
+
   try {
     const result = await generateText({
       model: provider.languageModel(modelName) as any,
       system: prompt,
-      prompt:
-        'Generate an SVG image based on the system instructions. Output only valid SVG code wrapped in ```xml and ``` code fences.',
+      prompt: systemHint,
     });
 
     res.json({ text: result.text });
@@ -76,6 +94,17 @@ app.post('/api/generate', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ── Default system hints per benchmark type ──
+function getSystemHintForType(type: string): string {
+  const hints: Record<string, string> = {
+    svg: 'Output only valid SVG code wrapped in ```xml and ``` code fences.',
+    text: 'Answer the question directly. Keep your answer concise.',
+    code: 'Output code wrapped in ``` language and ``` code fences.',
+    image: 'Output an image URL or base64-encoded image.',
+  };
+  return hints[type] ?? 'Respond to the prompt above.';
+}
 
 const PORT = parseInt(process.env.PORT || '3100');
 
