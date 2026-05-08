@@ -99,6 +99,7 @@ export default function App() {
           prompt,
           model: selectedModel,
           type: selectedBenchmark?.type,
+          system_hint: selectedBenchmark?.system_hint,
         }),
         signal: controller.signal,
       });

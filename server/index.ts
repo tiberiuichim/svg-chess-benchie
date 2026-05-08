@@ -75,17 +75,13 @@ app.post('/api/generate', async (req, res) => {
 
   const modelName = model || LLM_MODEL;
 
-  const { type } = req.body as { prompt?: string; model?: string; type?: string };
-
-  const systemHint = type
-    ? getSystemHintForType(type)
-    : 'Generate an SVG image based on the system instructions. Output only valid SVG code wrapped in ```xml and ``` code fences.';
+  const { system_hint } = req.body as { prompt?: string; model?: string; type?: string; system_hint?: string };
 
   try {
     const result = await generateText({
       model: provider.languageModel(modelName) as any,
       system: prompt,
-      prompt: systemHint,
+      prompt: system_hint,
     });
 
     res.json({ text: result.text });
@@ -94,17 +90,6 @@ app.post('/api/generate', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// ── Default system hints per benchmark type ──
-function getSystemHintForType(type: string): string {
-  const hints: Record<string, string> = {
-    svg: 'Output only valid SVG code wrapped in ```xml and ``` code fences.',
-    text: 'Answer the question directly. Keep your answer concise.',
-    code: 'Output code wrapped in ``` language and ``` code fences.',
-    image: 'Output an image URL or base64-encoded image.',
-  };
-  return hints[type] ?? 'Respond to the prompt above.';
-}
 
 const PORT = parseInt(process.env.PORT || '3100');
 
