@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { BenchmarkDetail } from '../types';
+import type { BenchmarkDetail } from '../types';
 
 interface PromptFormProps {
   onSend: (prompt: string) => void;

@@ -1,4 +1,4 @@
-import { BenchmarkDetail } from '../types';
+import type { BenchmarkDetail } from '../types';
 
 interface ExpectedAnswerPanelProps {
   benchmark: BenchmarkDetail | null;

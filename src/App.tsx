@@ -4,7 +4,7 @@ import { MessageDisplay } from './components/MessageDisplay';
 import { ModelSelector } from './components/ModelSelector';
 import { BenchmarkSelector } from './components/BenchmarkSelector';
 import { ExpectedAnswerPanel } from './components/ExpectedAnswerPanel';
-import { BenchmarkSummary, BenchmarkDetail } from './types';
+import type { BenchmarkSummary, BenchmarkDetail } from './types';
 
 export default function App() {
   const [userPrompt, setUserPrompt] = useState<string | null>(null);

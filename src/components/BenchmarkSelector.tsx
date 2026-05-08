@@ -1,4 +1,4 @@
-import { BenchmarkSummary } from '../types';
+import type { BenchmarkSummary } from '../types';
 
 interface BenchmarkSelectorProps {
   benchmarks: BenchmarkSummary[];
