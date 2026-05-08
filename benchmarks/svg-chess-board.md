@@ -1,11 +1,12 @@
 ---
-title: "SVG Chess Board"
-type: "svg"
-description: "Render a chess position from PGN as SVG"
+title: SVG Chess Board
+type: svg
+description: Render a chess position from PGN as SVG
 expected: |
   Valid SVG showing the chess board after move 7.h4.
   The last move (h4) should be highlighted.
-reference: "/original.webp"
+reference: /benchmarks/svg-chess-board/original.webp
+system_hint: Output only valid SVG code wrapped in ```xml and ``` code fences.
 ---
 
 Given this PGN string of a chess game:

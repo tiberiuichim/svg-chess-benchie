@@ -1,5 +1,0 @@
-Given this PGN string of a chess game:
-
-1. 
-b3 e5 2. Nf3 h5 3. d4 exd4 4. Nxd4 Nf6 5. f4 Ke7 6. Qd3 d5 7. h4 *
-Figure out the current state of the chessboard, create an image in SVG code, also highlight the last move.

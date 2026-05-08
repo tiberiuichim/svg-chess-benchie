@@ -67,8 +67,8 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, any>; 
         currentKey = key;
         currentLines = [];
       } else {
-        // Simple scalar
-        result[key] = rawValue;
+        // Simple scalar — strip surrounding quotes if present
+        result[key] = rawValue.replace(/^"([^"]*)"$/, '$1').replace(/^'([^']*)'$/, '$1');
       }
     } else if (currentKey) {
       // Continuation line for block scalar
