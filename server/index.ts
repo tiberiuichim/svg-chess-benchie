@@ -81,7 +81,7 @@ app.post('/api/generate', async (req, res) => {
     const result = await generateText({
       model: provider.languageModel(modelName) as any,
       system: prompt,
-      ...(system_hint ? { prompt: system_hint } : {}),
+      prompt: system_hint ?? 'Respond.',
     });
 
     res.json({ text: result.text });
